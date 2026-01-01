@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Billy Miners - Classic Tiers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg-base: #02040a;
+            --surface: rgba(15, 23, 42, 0.9);
+            --accent: #06b6d4; 
+            --danger: #f43f5e; 
+            --cell-unrevealed: #1e293b;
+            --cell-revealed: #f1f5f9;
+            --text-main: #f1f5f9;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.08) 0%, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Space Grotesk', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            height: 80px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        #viewport {
+            flex: 1;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        #grid {
+            display: grid;
+            gap: 2px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 4px;
+            border-radius: 8px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+            margin: auto;
+        }
+
+        .cell {
+            width: 26px;
+            height: 26px;
+            background: var(--cell-unrevealed);
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            transition: all 0.1s;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+            user-select: none;
+            cursor: pointer;
+        }
+
+        .cell:hover:not(.revealed):not(.flagged) {
+            background: #334155;
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+        }
+
+        .cell.revealed {
+            background: var(--cell-revealed);
+            color: #02040a;
+            border-color: transparent;
+            cursor: default;
+        }
+
+        .cell.revealed.has-neighbors {
+            cursor: pointer;
+        }
+
+        .cell.flagged::after { content: "▲"; color: var(--danger); font-size: 10px; filter: drop-shadow(0 0 3px var(--danger)); }
+        .cell.mine { background: var(--danger) !important; color: white; }
+        .cell.mine::after { content: "×"; font-size: 18px; }
+
+        .n-1 { color: #2563eb; } .n-2 { color: #059669; } .n-3 { color: #dc2626; }
+        .n-4 { color: #1e3a8a; } .n-5 { color: #7c2d12; } .n-6 { color: #0891b2; }
+
+        .difficulty-btn {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+        }
+        .difficulty-btn.active {
+            background: var(--accent);
+            color: black;
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+        }
+
+        .hud-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 60px;
+        }
+        .hud-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
+        .hud-value { font-family: 'JetBrains Mono', monospace; font-size: 18px; color: var(--accent); }
+
+        #modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 4, 10, 0.97);
+            backdrop-filter: blur(15px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-box {
+            background: #1e293b;
+            border: 2px solid var(--accent);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            text-align: center;
+            width: auto;
+            max-width: 90vw;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            box-shadow: 0 0 60px rgba(6, 182, 212, 0.3);
+            animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes modalPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .failure-image {
+            width: auto;
+            max-width: 100%;
+            height: auto;
+            max-height: 60vh;
+            object-fit: contain;
+            border-radius: 0.5rem;
+            border: 1px solid var(--danger);
+            display: none;
+        }
+
+        .restart-timer {
+            font-size: 14px;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="flex items-center gap-4">
+            <div class="flex flex-col">
+                <span class="text-[10px] font-bold text-cyan-500 tracking-widest uppercase">Billy</span>
+                <span class="text-base font-black italic uppercase leading-none">Miners</span>
+            </div>
+            <div class="flex gap-2 ml-4">
+                <button onclick="changeDifficulty('beginner')" id="btn-beginner" class="difficulty-btn active">Beg</button>
+                <button onclick="changeDifficulty('intermediate')" id="btn-intermediate" class="difficulty-btn">Int</button>
+                <button onclick="changeDifficulty('expert')" id="btn-expert" class="difficulty-btn">Exp</button>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <div class="flex gap-6 h-10 items-center">
+                <div class="hud-item">
+                    <span class="hud-label">Mines</span>
+                    <span id="mine-count" class="hud-value">00</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">Time</span>
+                    <span id="timer" class="hud-value">000</span>
+                </div>
+            </div>
+            <button id="reset-btn" class="bg-white/10 hover:bg-cyan-500 hover:text-black text-white font-bold p-2 rounded transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <main id="viewport">
+        <div id="grid"></div>
+    </main>
+
+    <div id="modal-overlay">
+        <div class="modal-box">
+            <h2 id="modal-title" class="text-xl font-black uppercase text-rose-500">DETONATION DETECTED</h2>
+            <img id="failure-pic" src="picture/Media (3).jpeg" alt="Failure Image" class="failure-image">
+            <p id="modal-msg" class="text-slate-400 text-xs font-light">Billy has fallen in the line of duty.</p>
+            <div id="restart-countdown" class="restart-timer">AUTO-RESTARTING IN 1...</div>
+            <button id="modal-btn" class="w-full bg-white/10 hover:bg-rose-500 text-white font-bold py-2 rounded uppercase text-[10px] tracking-widest transition-all">ABORT RESTART</button>
+        </div>
+    </div>
+
+    <script>
+        const TIERS = {
+            beginner: { w: 9, h: 9, m: 10 },
+            intermediate: { w: 16, h: 16, m: 40 },
+            expert: { w: 30, h: 16, m: 99 }
+        };
+
+        let currentTier = 'beginner';
+        let autoRestartTimeout = null;
+        let autoRestartInterval = null;
+
+        const state = {
+            grid: [],
+            isGameOver: false,
+            isTimerRunning: false,
+            timer: 0,
+            timerInterval: null,
+            flags: 0,
+            revealedCount: 0
+        };
+
+        const dom = {
+            viewport: document.getElementById('viewport'),
+            grid: document.getElementById('grid'),
+            mineDisplay: document.getElementById('mine-count'),
+            timerDisplay: document.getElementById('timer'),
+            resetBtn: document.getElementById('reset-btn'),
+            modal: document.getElementById('modal-overlay'),
+            modalTitle: document.getElementById('modal-title'),
+            modalMsg: document.getElementById('modal-msg'),
+            modalBtn: document.getElementById('modal-btn'),
+            failurePic: document.getElementById('failure-pic'),
+            countdown: document.getElementById('restart-countdown')
+        };
+
+        function init() {
+            clearAutoRestart();
+            clearInterval(state.timerInterval);
+            const { w, h, m } = TIERS[currentTier];
+            
+            state.grid = [];
+            state.isGameOver = false;
+            state.isTimerRunning = false;
+            state.timer = 0;
+            state.flags = 0;
+            state.revealedCount = 0;
+            
+            dom.timerDisplay.innerText = "000";
+            dom.mineDisplay.innerText = String(m).padStart(2, '0');
+            dom.modal.style.display = 'none';
+            dom.failurePic.style.display = 'none';
+            
+            dom.grid.style.gridTemplateColumns = `repeat(${w}, 26px)`;
+            dom.grid.style.gridTemplateRows = `repeat(${h}, 26px)`;
+            dom.grid.innerHTML = '';
+
+            for (let i = 0; i < w * h; i++) {
+                state.grid.push({ type: 'empty', revealed: false, flagged: false, count: 0 });
+                const c = document.createElement('div');
+                c.className = 'cell';
+                c.id = `c-${i}`;
+                c.dataset.index = i;
+                dom.grid.appendChild(c);
+            }
+
+            let placed = 0;
+            while (placed < m) {
+                const idx = Math.floor(Math.random() * state.grid.length);
+                if (state.grid[idx].type === 'empty') {
+                    state.grid[idx].type = 'mine';
+                    placed++;
+                }
+            }
+
+            for (let i = 0; i < state.grid.length; i++) {
+                if (state.grid[i].type === 'mine') continue;
+                state.grid[i].count = getNeighbors(i).filter(n => state.grid[n].type === 'mine').length;
+            }
+        }
+
+        function getNeighbors(idx) {
+            const { w, h } = TIERS[currentTier];
+            const n = [];
+            const x = idx % w, y = Math.floor(idx / w);
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (dx === 0 && dy === 0) continue;
+                    const nx = x + dx, ny = y + dy;
+                    if (nx >= 0 && nx < w && ny >= 0 && ny < h) n.push(ny * w + nx);
+                }
+            }
+            return n;
+        }
+
+        function checkFirstMove() {
+            if (!state.isTimerRunning) {
+                state.isTimerRunning = true;
+                startTimer();
+            }
+        }
+
+        function reveal(idx) {
+            if (state.isGameOver) return;
+            checkFirstMove();
+            
+            const s = state.grid[idx];
+            if (s.revealed || s.flagged) return;
+
+            if (s.type === 'mine') {
+                endGame(false);
+                return;
+            }
+
+            const q = [idx];
+            while (q.length > 0) {
+                const curIdx = q.shift();
+                const cur = state.grid[curIdx];
+                if (cur.revealed || cur.flagged) continue;
+
+                cur.revealed = true;
+                state.revealedCount++;
+                const el = document.getElementById(`c-${curIdx}`);
+                el.classList.add('revealed');
+
+                if (cur.count > 0) {
+                    el.innerText = cur.count;
+                    el.classList.add(`n-${cur.count}`);
+                    el.classList.add('has-neighbors');
+                } else {
+                    getNeighbors(curIdx).forEach(n => { if (!state.grid[n].revealed) q.push(n); });
+                }
+            }
+            
+            const { w, h, m } = TIERS[currentTier];
+            if (state.revealedCount === (w * h) - m) endGame(true);
+        }
+
+        function chord(idx) {
+            const s = state.grid[idx];
+            if (!s.revealed || s.count === 0) return;
+            const neighbors = getNeighbors(idx);
+            const flagCount = neighbors.filter(n => state.grid[n].flagged).length;
+            if (flagCount === s.count) {
+                neighbors.forEach(n => {
+                    if (!state.grid[n].revealed && !state.grid[n].flagged) reveal(n);
+                });
+            }
+        }
+
+        function toggleFlag(idx) {
+            if (state.isGameOver || state.grid[idx].revealed) return;
+            checkFirstMove();
+            
+            state.grid[idx].flagged = !state.grid[idx].flagged;
+            const el = document.getElementById(`c-${idx}`);
+            if (state.grid[idx].flagged) { el.classList.add('flagged'); state.flags++; }
+            else { el.classList.remove('flagged'); state.flags--; }
+            const { m } = TIERS[currentTier];
+            dom.mineDisplay.innerText = String(Math.max(0, m - state.flags)).padStart(2, '0');
+        }
+
+        function startTimer() {
+            clearInterval(state.timerInterval);
+            state.timerInterval = setInterval(() => {
+                state.timer++;
+                dom.timerDisplay.innerText = String(Math.min(999, state.timer)).padStart(3, '0');
+            }, 1000);
+        }
+
+        function endGame(win) {
+            state.isGameOver = true;
+            clearInterval(state.timerInterval);
+            state.grid.forEach((c, i) => {
+                if (c.type === 'mine') document.getElementById(`c-${i}`).classList.add('mine');
+            });
+
+            dom.modalTitle.innerText = win ? "SCAN SUCCESS" : "MISSION FAILED";
+            dom.modalTitle.className = `text-2xl font-black mb-1 uppercase ${win ? 'text-cyan-400' : 'text-rose-500'}`;
+            dom.modalMsg.innerText = win ? `Efficiency peak. Area secured in ${state.timer}s.` : "Billy hit a mine.";
+            dom.modal.style.display = 'flex';
+
+            if (!win) {
+                dom.failurePic.style.display = 'block';
+                startAutoRestart(1); // Updated to 1 second
+            } else {
+                dom.countdown.innerText = "MISSION ACCOMPLISHED";
+            }
+        }
+
+        function startAutoRestart(seconds) {
+            let timeLeft = seconds;
+            dom.countdown.innerText = `AUTO-RESTARTING IN ${timeLeft}...`;
+            
+            autoRestartInterval = setInterval(() => {
+                timeLeft--;
+                if (timeLeft >= 0) {
+                    dom.countdown.innerText = `AUTO-RESTARTING IN ${timeLeft}...`;
+                }
+            }, 1000);
+
+            autoRestartTimeout = setTimeout(() => {
+                init();
+            }, seconds * 1000);
+        }
+
+        function clearAutoRestart() {
+            if (autoRestartTimeout) clearTimeout(autoRestartTimeout);
+            if (autoRestartInterval) clearInterval(autoRestartInterval);
+            autoRestartTimeout = null;
+            autoRestartInterval = null;
+            dom.countdown.innerText = "";
+        }
+
+        function changeDifficulty(tier) {
+            currentTier = tier;
+            document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${tier}`).classList.add('active');
+            init();
+        }
+
+        dom.grid.addEventListener('mousedown', (e) => {
+            const c = e.target.closest('.cell');
+            if (!c) return;
+            const i = parseInt(c.dataset.index);
+            if (e.button === 0) {
+                if (state.grid[i].revealed) chord(i);
+                else reveal(i);
+            } else if (e.button === 2) {
+                toggleFlag(i);
+            }
+        });
+
+        window.addEventListener('contextmenu', e => e.preventDefault());
+        dom.resetBtn.addEventListener('click', init);
+        dom.modalBtn.addEventListener('click', () => {
+            clearAutoRestart();
+            dom.countdown.innerText = "RESTART ABORTED";
+        });
+        
+        window.onload = init;
+    </script>
+</body>
+</html>
