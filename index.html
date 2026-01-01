@@ -64,6 +64,10 @@
             margin: auto;
         }
 
+        #grid.hint-cursor {
+            cursor: crosshair !important;
+        }
+
         .cell {
             width: 26px;
             height: 26px;
@@ -75,16 +79,17 @@
             font-size: 14px;
             font-weight: 800;
             font-family: 'JetBrains Mono', monospace;
-            transition: all 0.1s;
             border: 1px solid rgba(255, 255, 255, 0.02);
             user-select: none;
             cursor: pointer;
+            transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.8s;
         }
 
         .cell:hover:not(.revealed):not(.flagged) {
-            background: #334155;
-            border-color: var(--accent);
-            box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+            background: var(--accent) !important;
+            box-shadow: 0 0 15px var(--accent);
+            transition: background 0s;
+            z-index: 10;
         }
 
         .cell.revealed {
@@ -92,15 +97,30 @@
             color: #02040a;
             border-color: transparent;
             cursor: default;
+            transition: none; 
         }
 
         .cell.revealed.has-neighbors {
             cursor: pointer;
         }
 
-        .cell.flagged::after { content: "▲"; color: var(--danger); font-size: 10px; filter: drop-shadow(0 0 3px var(--danger)); }
-        .cell.mine { background: var(--danger) !important; color: white; }
-        .cell.mine::after { content: "×"; font-size: 18px; }
+        .cell.flagged::after { 
+            content: "💣"; 
+            font-size: 14px; 
+            filter: drop-shadow(0 0 5px var(--accent));
+            animation: flagPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .cell.mine { background: var(--danger) !important; color: white; transition: none; }
+        .cell.mine::after { 
+            content: "💣"; 
+            font-size: 16px; 
+        }
+
+        @keyframes flagPop {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
 
         .n-1 { color: #2563eb; } .n-2 { color: #059669; } .n-3 { color: #dc2626; }
         .n-4 { color: #1e3a8a; } .n-5 { color: #7c2d12; } .n-6 { color: #0891b2; }
@@ -127,10 +147,17 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-width: 60px;
+            min-width: 50px;
         }
-        .hud-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
-        .hud-value { font-family: 'JetBrains Mono', monospace; font-size: 18px; color: var(--accent); }
+        .hud-label { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
+        .hud-value { font-family: 'JetBrains Mono', monospace; font-size: 16px; color: var(--accent); }
+
+        #hint-btn.active {
+            background: #facc15 !important;
+            color: black !important;
+            box-shadow: 0 0 20px #facc15;
+            border-color: #facc15;
+        }
 
         #modal-overlay {
             position: fixed;
@@ -184,25 +211,35 @@
             font-family: 'JetBrains Mono', monospace;
             font-weight: bold;
         }
+
+        /* WIN STATE COLOR */
+        .win-glow {
+            color: var(--accent) !important;
+            text-shadow: 0 0 10px var(--accent);
+        }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="flex items-center gap-4">
-            <div class="flex flex-col">
-                <span class="text-[10px] font-bold text-cyan-500 tracking-widest uppercase">Billy</span>
-                <span class="text-base font-black italic uppercase leading-none">Miners</span>
+        <div class="flex items-center gap-3">
+            <div class="flex flex-col" id="title-block">
+                <span id="title-top" class="text-[9px] font-bold text-cyan-500 tracking-widest uppercase">Billy</span>
+                <span id="title-bottom" class="text-sm font-black italic uppercase leading-none">Miners</span>
             </div>
-            <div class="flex gap-2 ml-4">
+            <div class="flex gap-1 ml-2">
                 <button onclick="changeDifficulty('beginner')" id="btn-beginner" class="difficulty-btn active">Beg</button>
                 <button onclick="changeDifficulty('intermediate')" id="btn-intermediate" class="difficulty-btn">Int</button>
                 <button onclick="changeDifficulty('expert')" id="btn-expert" class="difficulty-btn">Exp</button>
             </div>
         </div>
 
-        <div class="flex items-center gap-6">
-            <div class="flex gap-6 h-10 items-center">
+        <div class="flex items-center gap-4">
+            <div class="flex gap-4 h-10 items-center">
+                <button id="hint-btn" onclick="toggleHintMode()" class="bg-white/5 hover:bg-yellow-400 hover:text-black text-yellow-500 border border-white/10 p-2 rounded transition-all" title="Hint: Show one bomb in selected area">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                </button>
+
                 <div class="hud-item">
                     <span class="hud-label">Mines</span>
                     <span id="mine-count" class="hud-value">00</span>
@@ -224,11 +261,10 @@
 
     <div id="modal-overlay">
         <div class="modal-box">
-            <h2 id="modal-title" class="text-xl font-black uppercase text-rose-500">DETONATION DETECTED</h2>
+            <h2 id="modal-title" class="text-3xl font-black uppercase leading-tight">DETONATION DETECTED</h2>
             <img id="failure-pic" src="picture/Media (3).jpeg" alt="Failure Image" class="failure-image">
-            <p id="modal-msg" class="text-slate-400 text-xs font-light">Billy has fallen in the line of duty.</p>
-            <div id="restart-countdown" class="restart-timer">AUTO-RESTARTING IN 1...</div>
-            <button id="modal-btn" class="w-full bg-white/10 hover:bg-rose-500 text-white font-bold py-2 rounded uppercase text-[10px] tracking-widest transition-all">ABORT RESTART</button>
+            <p id="modal-msg" class="text-slate-400 text-xs font-light">Target sector report.</p>
+            <div id="restart-countdown" class="restart-timer"></div>
         </div>
     </div>
 
@@ -247,6 +283,8 @@
             grid: [],
             isGameOver: false,
             isTimerRunning: false,
+            isHintMode: false,
+            hasRevealedAny: false, 
             timer: 0,
             timerInterval: null,
             flags: 0,
@@ -259,12 +297,14 @@
             mineDisplay: document.getElementById('mine-count'),
             timerDisplay: document.getElementById('timer'),
             resetBtn: document.getElementById('reset-btn'),
+            hintBtn: document.getElementById('hint-btn'),
             modal: document.getElementById('modal-overlay'),
             modalTitle: document.getElementById('modal-title'),
             modalMsg: document.getElementById('modal-msg'),
-            modalBtn: document.getElementById('modal-btn'),
             failurePic: document.getElementById('failure-pic'),
-            countdown: document.getElementById('restart-countdown')
+            countdown: document.getElementById('restart-countdown'),
+            titleTop: document.getElementById('title-top'),
+            titleBottom: document.getElementById('title-bottom')
         };
 
         function init() {
@@ -275,14 +315,26 @@
             state.grid = [];
             state.isGameOver = false;
             state.isTimerRunning = false;
+            state.isHintMode = false;
+            state.hasRevealedAny = false; 
             state.timer = 0;
             state.flags = 0;
             state.revealedCount = 0;
             
+            // RESET TITLE
+            dom.titleTop.innerText = "Billy";
+            dom.titleTop.classList.remove('win-glow');
+            dom.titleBottom.innerText = "Miners";
+            dom.titleBottom.classList.remove('win-glow', 'text-cyan-400');
+            dom.titleTop.style.color = "";
+            dom.titleBottom.style.color = "";
+
             dom.timerDisplay.innerText = "000";
             dom.mineDisplay.innerText = String(m).padStart(2, '0');
             dom.modal.style.display = 'none';
             dom.failurePic.style.display = 'none';
+            dom.hintBtn.classList.remove('active');
+            dom.grid.classList.remove('hint-cursor');
             
             dom.grid.style.gridTemplateColumns = `repeat(${w}, 26px)`;
             dom.grid.style.gridTemplateRows = `repeat(${h}, 26px)`;
@@ -333,18 +385,46 @@
             }
         }
 
+        function toggleHintMode() {
+            if (state.isGameOver) return;
+            state.isHintMode = !state.isHintMode;
+            dom.hintBtn.classList.toggle('active', state.isHintMode);
+            dom.grid.classList.toggle('hint-cursor', state.isHintMode);
+        }
+
+        function useHint(idx) {
+            checkFirstMove();
+            const area = [idx, ...getNeighbors(idx)];
+            const hiddenMineIdx = area.find(nIdx => state.grid[nIdx].type === 'mine' && !state.grid[nIdx].revealed && !state.grid[nIdx].flagged);
+            
+            if (hiddenMineIdx !== undefined) {
+                toggleFlag(hiddenMineIdx);
+            }
+            
+            state.isHintMode = false;
+            dom.hintBtn.classList.remove('active');
+            dom.grid.classList.remove('hint-cursor');
+        }
+
         function reveal(idx) {
             if (state.isGameOver) return;
+            
+            const isPureFirstClick = !state.hasRevealedAny; 
             checkFirstMove();
             
             const s = state.grid[idx];
             if (s.revealed || s.flagged) return;
 
             if (s.type === 'mine') {
-                endGame(false);
+                if (isPureFirstClick) {
+                    init(); 
+                } else {
+                    endGame(false); 
+                }
                 return;
             }
 
+            state.hasRevealedAny = true; 
             const q = [idx];
             while (q.length > 0) {
                 const curIdx = q.shift();
@@ -403,21 +483,31 @@
 
         function endGame(win) {
             state.isGameOver = true;
+            state.isHintMode = false;
+            dom.hintBtn.classList.remove('active');
+            dom.grid.classList.remove('hint-cursor');
             clearInterval(state.timerInterval);
+            
             state.grid.forEach((c, i) => {
                 if (c.type === 'mine') document.getElementById(`c-${i}`).classList.add('mine');
             });
 
-            dom.modalTitle.innerText = win ? "SCAN SUCCESS" : "MISSION FAILED";
-            dom.modalTitle.className = `text-2xl font-black mb-1 uppercase ${win ? 'text-cyan-400' : 'text-rose-500'}`;
-            dom.modalMsg.innerText = win ? `Efficiency peak. Area secured in ${state.timer}s.` : "Billy hit a mine.";
-            dom.modal.style.display = 'flex';
-
-            if (!win) {
-                dom.failurePic.style.display = 'block';
-                startAutoRestart(1); // Updated to 1 second
+            if (win) {
+                // WIN STATE: CHANGE HEADER, NO POPUP
+                dom.titleTop.innerText = "EZ";
+                dom.titleTop.classList.add('win-glow');
+                dom.titleBottom.innerText = "GAME";
+                dom.titleBottom.classList.add('win-glow');
+                dom.titleTop.style.color = "var(--accent)";
+                dom.titleBottom.style.color = "var(--accent)";
             } else {
-                dom.countdown.innerText = "MISSION ACCOMPLISHED";
+                // LOSE STATE: POPUP
+                dom.modal.style.display = 'flex';
+                dom.modalTitle.innerText = "Noob";
+                dom.modalTitle.className = "text-3xl font-black mb-1 uppercase text-rose-500";
+                dom.modalMsg.innerText = "Billy hit a mine.";
+                dom.failurePic.style.display = 'block';
+                startAutoRestart(1);
             }
         }
 
@@ -456,6 +546,12 @@
             const c = e.target.closest('.cell');
             if (!c) return;
             const i = parseInt(c.dataset.index);
+            
+            if (state.isHintMode) {
+                useHint(i);
+                return;
+            }
+
             if (e.button === 0) {
                 if (state.grid[i].revealed) chord(i);
                 else reveal(i);
@@ -466,10 +562,6 @@
 
         window.addEventListener('contextmenu', e => e.preventDefault());
         dom.resetBtn.addEventListener('click', init);
-        dom.modalBtn.addEventListener('click', () => {
-            clearAutoRestart();
-            dom.countdown.innerText = "RESTART ABORTED";
-        });
         
         window.onload = init;
     </script>
