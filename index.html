@@ -1,569 +1,632 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Billy Miners - Classic Tiers</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=JetBrains+Mono:wght@400;700&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Billy Miners</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #c0c0c0;
+  font-family: 'Arial', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
-        :root {
-            --bg-base: #02040a;
-            --surface: rgba(15, 23, 42, 0.9);
-            --accent: #06b6d4; 
-            --danger: #f43f5e; 
-            --cell-unrevealed: #1e293b;
-            --cell-revealed: #f1f5f9;
-            --text-main: #f1f5f9;
-        }
+header {
+  background: #c0c0c0;
+  border-bottom: 3px solid #808080;
+  border-top: 3px solid #ffffff;
+  border-left: 3px solid #ffffff;
+  border-right: 3px solid #808080;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 8px;
+}
 
-        body {
-            background-color: var(--bg-base);
-            background-image: radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.08) 0%, transparent 50%);
-            color: var(--text-main);
-            font-family: 'Space Grotesk', sans-serif;
-            margin: 0;
-            overflow: hidden;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+.title-block { display: flex; flex-direction: column; line-height: 1; }
+.title-top { font-size: 9px; font-weight: bold; color: #000080; letter-spacing: 1px; text-transform: uppercase; }
+.title-bottom { font-size: 14px; font-weight: 900; font-style: italic; text-transform: uppercase; color: #000; }
 
-        header {
-            height: 80px;
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 1.5rem;
-            flex-shrink: 0;
-            z-index: 100;
-        }
+.diff-group { display: flex; gap: 4px; }
+.diff-btn {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: bold;
+  background: #c0c0c0;
+  color: #000;
+  border-top: 2px solid #ffffff;
+  border-left: 2px solid #ffffff;
+  border-bottom: 2px solid #808080;
+  border-right: 2px solid #808080;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.diff-btn.active {
+  border-top: 2px solid #808080;
+  border-left: 2px solid #808080;
+  border-bottom: 2px solid #ffffff;
+  border-right: 2px solid #ffffff;
+  background: #b0b0b0;
+}
+.diff-btn:hover:not(.active) { background: #d0d0d0; }
 
-        #viewport {
-            flex: 1;
-            width: 100vw;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: auto;
-            padding: 20px;
-            position: relative;
-        }
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-        #grid {
-            display: grid;
-            gap: 2px;
-            background: rgba(255, 255, 255, 0.03);
-            padding: 4px;
-            border-radius: 8px;
-            box-shadow: 0 0 40px rgba(0,0,0,0.5);
-            margin: auto;
-        }
+.lcd {
+  background: #000;
+  color: #ff0000;
+  font-family: 'Courier New', monospace;
+  font-size: 20px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border: 2px inset #808080;
+  min-width: 52px;
+  text-align: center;
+  letter-spacing: 2px;
+}
+.lcd-label { font-size: 9px; color: #444; text-align: center; text-transform: uppercase; }
 
-        #grid.hint-cursor {
-            cursor: crosshair !important;
-        }
+.reset-btn {
+  width: 32px; height: 32px;
+  background: #c0c0c0;
+  border-top: 2px solid #ffffff;
+  border-left: 2px solid #ffffff;
+  border-bottom: 2px solid #808080;
+  border-right: 2px solid #808080;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.reset-btn:active {
+  border-top: 2px solid #808080;
+  border-left: 2px solid #808080;
+  border-bottom: 2px solid #ffffff;
+  border-right: 2px solid #ffffff;
+}
 
-        .cell {
-            width: 26px;
-            height: 26px;
-            background: var(--cell-unrevealed);
-            border-radius: 3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: 800;
-            font-family: 'JetBrains Mono', monospace;
-            border: 1px solid rgba(255, 255, 255, 0.02);
-            user-select: none;
-            cursor: pointer;
-            transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.8s;
-        }
+.mode-toggle {
+  display: flex;
+  border: 2px solid #808080;
+  overflow: hidden;
+  border-radius: 2px;
+}
+.mode-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  background: #c0c0c0;
+  color: #444;
+  border: none;
+  border-top: 2px solid #ffffff;
+  border-left: 2px solid #ffffff;
+  border-bottom: 2px solid #808080;
+  border-right: 2px solid #808080;
+  user-select: none;
+}
+.mode-btn.active {
+  background: #808080;
+  color: #fff;
+  border-top: 2px solid #606060;
+  border-left: 2px solid #606060;
+  border-bottom: 2px solid #d0d0d0;
+  border-right: 2px solid #d0d0d0;
+}
+.mode-btn:hover:not(.active) { background: #d0d0d0; }
 
-        .cell:hover:not(.revealed):not(.flagged) {
-            background: var(--accent) !important;
-            box-shadow: 0 0 15px var(--accent);
-            transition: background 0s;
-            z-index: 10;
-        }
+#hint-btn {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: bold;
+  background: #c0c0c0;
+  color: #000;
+  border-top: 2px solid #ffffff;
+  border-left: 2px solid #ffffff;
+  border-bottom: 2px solid #808080;
+  border-right: 2px solid #808080;
+  cursor: pointer;
+}
+#hint-btn.active { background: #ffff00; }
 
-        .cell.revealed {
-            background: var(--cell-revealed);
-            color: #02040a;
-            border-color: transparent;
-            cursor: default;
-            transition: none; 
-        }
+#viewport {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 10px;
+}
 
-        .cell.revealed.has-neighbors {
-            cursor: pointer;
-        }
+#game-panel {
+  background: #c0c0c0;
+  border-top: 3px solid #ffffff;
+  border-left: 3px solid #ffffff;
+  border-bottom: 3px solid #808080;
+  border-right: 3px solid #808080;
+  padding: 6px;
+  display: inline-block;
+}
 
-        .cell.flagged::after { 
-            content: "💣"; 
-            font-size: 14px; 
-            filter: drop-shadow(0 0 5px var(--accent));
-            animation: flagPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
+#grid {
+  display: grid;
+  gap: 1px;
+  background: #808080;
+  border: 2px inset #808080;
+}
 
-        .cell.mine { background: var(--danger) !important; color: white; transition: none; }
-        .cell.mine::after { 
-            content: "💣"; 
-            font-size: 16px; 
-        }
+.cell {
+  width: 24px; height: 24px;
+  background: #c0c0c0;
+  border-top: 2px solid #ffffff;
+  border-left: 2px solid #ffffff;
+  border-bottom: 2px solid #808080;
+  border-right: 2px solid #808080;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 900;
+  font-family: Arial, sans-serif;
+  user-select: none; cursor: pointer;
+}
+.cell:hover:not(.revealed):not(.flagged) { background: #d8d8d8; }
+.cell.revealed {
+  background: #c0c0c0;
+  border: 1px solid #808080;
+  cursor: default;
+}
+.cell.revealed.has-neighbors { cursor: pointer; }
+.cell.flagged::after { content: "🚩"; font-size: 13px; }
+.cell.mine { background: #ff0000 !important; }
+.cell.mine::after { content: "💣"; font-size: 14px; }
+.cell.mine-normal { background: #c0c0c0 !important; }
+.cell.mine-normal::after { content: "💣"; font-size: 14px; }
 
-        @keyframes flagPop {
-            from { transform: scale(0.5); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
+.n-1 { color: #0000ff; }
+.n-2 { color: #008000; }
+.n-3 { color: #ff0000; }
+.n-4 { color: #000080; }
+.n-5 { color: #800000; }
+.n-6 { color: #008080; }
+.n-7 { color: #000000; }
+.n-8 { color: #808080; }
 
-        .n-1 { color: #2563eb; } .n-2 { color: #059669; } .n-3 { color: #dc2626; }
-        .n-4 { color: #1e3a8a; } .n-5 { color: #7c2d12; } .n-6 { color: #0891b2; }
+#modal-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.modal-box {
+  background: #c0c0c0;
+  border-top: 3px solid #ffffff;
+  border-left: 3px solid #ffffff;
+  border-bottom: 3px solid #808080;
+  border-right: 3px solid #808080;
+  padding: 20px 28px;
+  text-align: center;
+  min-width: 220px;
+}
+.modal-box h2 { font-size: 18px; font-weight: 900; margin-bottom: 8px; }
+.modal-box p { font-size: 13px; color: #333; margin-bottom: 12px; }
+.modal-img { max-width: 200px; max-height: 160px; object-fit: contain; margin-bottom: 10px; display: none; }
+.countdown { font-size: 12px; color: #000080; font-weight: bold; }
 
-        .difficulty-btn {
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: all 0.2s;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #94a3b8;
-        }
-        .difficulty-btn.active {
-            background: var(--accent);
-            color: black;
-            border-color: var(--accent);
-            box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
-        }
-
-        .hud-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-width: 50px;
-        }
-        .hud-label { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
-        .hud-value { font-family: 'JetBrains Mono', monospace; font-size: 16px; color: var(--accent); }
-
-        #hint-btn.active {
-            background: #facc15 !important;
-            color: black !important;
-            box-shadow: 0 0 20px #facc15;
-            border-color: #facc15;
-        }
-
-        #modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(2, 4, 10, 0.97);
-            backdrop-filter: blur(15px);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            padding: 20px;
-        }
-
-        .modal-box {
-            background: #1e293b;
-            border: 2px solid var(--accent);
-            padding: 1.5rem;
-            border-radius: 1rem;
-            text-align: center;
-            width: auto;
-            max-width: 90vw;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-            box-shadow: 0 0 60px rgba(6, 182, 212, 0.3);
-            animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes modalPop {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-
-        .failure-image {
-            width: auto;
-            max-width: 100%;
-            height: auto;
-            max-height: 60vh;
-            object-fit: contain;
-            border-radius: 0.5rem;
-            border: 1px solid var(--danger);
-            display: none;
-        }
-
-        .restart-timer {
-            font-size: 14px;
-            color: var(--accent);
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: bold;
-        }
-
-        /* WIN STATE COLOR */
-        .win-glow {
-            color: var(--accent) !important;
-            text-shadow: 0 0 10px var(--accent);
-        }
-    </style>
+.win-title { color: #000080; }
+</style>
 </head>
 <body>
+<header>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <div class="title-block">
+      <span class="title-top" id="title-top">Billy</span>
+      <span class="title-bottom" id="title-bottom">Miners</span>
+    </div>
+    <div class="diff-group">
+      <button onclick="changeDifficulty('beginner')" id="btn-beginner" class="diff-btn active">Beg</button>
+      <button onclick="changeDifficulty('intermediate')" id="btn-intermediate" class="diff-btn">Int</button>
+      <button onclick="changeDifficulty('expert')" id="btn-expert" class="diff-btn">Exp</button>
+    </div>
+  </div>
 
-    <header>
-        <div class="flex items-center gap-3">
-            <div class="flex flex-col" id="title-block">
-                <span id="title-top" class="text-[9px] font-bold text-cyan-500 tracking-widest uppercase">Billy</span>
-                <span id="title-bottom" class="text-sm font-black italic uppercase leading-none">Miners</span>
-            </div>
-            <div class="flex gap-1 ml-2">
-                <button onclick="changeDifficulty('beginner')" id="btn-beginner" class="difficulty-btn active">Beg</button>
-                <button onclick="changeDifficulty('intermediate')" id="btn-intermediate" class="difficulty-btn">Int</button>
-                <button onclick="changeDifficulty('expert')" id="btn-expert" class="difficulty-btn">Exp</button>
-            </div>
-        </div>
-
-        <div class="flex items-center gap-4">
-            <div class="flex gap-4 h-10 items-center">
-                <button id="hint-btn" onclick="toggleHintMode()" class="bg-white/5 hover:bg-yellow-400 hover:text-black text-yellow-500 border border-white/10 p-2 rounded transition-all" title="Hint: Show one bomb in selected area">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
-                </button>
-
-                <div class="hud-item">
-                    <span class="hud-label">Mines</span>
-                    <span id="mine-count" class="hud-value">00</span>
-                </div>
-                <div class="hud-item">
-                    <span class="hud-label">Time</span>
-                    <span id="timer" class="hud-value">000</span>
-                </div>
-            </div>
-            <button id="reset-btn" class="bg-white/10 hover:bg-cyan-500 hover:text-black text-white font-bold p-2 rounded transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-            </button>
-        </div>
-    </header>
-
-    <main id="viewport">
-        <div id="grid"></div>
-    </main>
-
-    <div id="modal-overlay">
-        <div class="modal-box">
-            <h2 id="modal-title" class="text-3xl font-black uppercase leading-tight">DETONATION DETECTED</h2>
-            <img id="failure-pic" src="picture/Media (3).jpeg" alt="Failure Image" class="failure-image">
-            <p id="modal-msg" class="text-slate-400 text-xs font-light">Target sector report.</p>
-            <div id="restart-countdown" class="restart-timer"></div>
-        </div>
+  <div class="hud">
+    <div class="mode-toggle">
+      <button id="mode-dig" class="mode-btn active" onclick="setMode('dig')">⛏ Dig</button>
+      <button id="mode-flag" class="mode-btn" onclick="setMode('flag')">🚩 Flag</button>
     </div>
 
-    <script>
-        const TIERS = {
-            beginner: { w: 9, h: 9, m: 10 },
-            intermediate: { w: 16, h: 16, m: 40 },
-            expert: { w: 30, h: 16, m: 99 }
-        };
+    <button id="hint-btn" onclick="toggleHintMode()" title="Hint">💡</button>
 
-        let currentTier = 'beginner';
-        let autoRestartTimeout = null;
-        let autoRestartInterval = null;
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <div class="lcd" id="mine-count">010</div>
+      <div class="lcd-label">Mines</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <div class="lcd" id="timer">000</div>
+      <div class="lcd-label">Time</div>
+    </div>
 
-        const state = {
-            grid: [],
-            isGameOver: false,
-            isTimerRunning: false,
-            isHintMode: false,
-            hasRevealedAny: false, 
-            timer: 0,
-            timerInterval: null,
-            flags: 0,
-            revealedCount: 0
-        };
+    <button class="reset-btn" id="reset-btn">🙂</button>
+  </div>
+</header>
 
-        const dom = {
-            viewport: document.getElementById('viewport'),
-            grid: document.getElementById('grid'),
-            mineDisplay: document.getElementById('mine-count'),
-            timerDisplay: document.getElementById('timer'),
-            resetBtn: document.getElementById('reset-btn'),
-            hintBtn: document.getElementById('hint-btn'),
-            modal: document.getElementById('modal-overlay'),
-            modalTitle: document.getElementById('modal-title'),
-            modalMsg: document.getElementById('modal-msg'),
-            failurePic: document.getElementById('failure-pic'),
-            countdown: document.getElementById('restart-countdown'),
-            titleTop: document.getElementById('title-top'),
-            titleBottom: document.getElementById('title-bottom')
-        };
+<div id="viewport" style="position:relative;">
+  <div id="game-panel">
+    <div id="grid"></div>
+  </div>
+  <div id="modal-overlay">
+    <div class="modal-box">
+      <h2 id="modal-title">BOOM!</h2>
+      <img id="failure-pic" src="/Users/billybobby/minesweeper/picture/Media (3).jpeg" alt="" class="modal-img">
+      <p id="modal-msg">Billy hit a mine.</p>
+      <div class="countdown" id="restart-countdown"></div>
+    </div>
+  </div>
+</div>
 
-        function init() {
-            clearAutoRestart();
-            clearInterval(state.timerInterval);
-            const { w, h, m } = TIERS[currentTier];
-            
-            state.grid = [];
-            state.isGameOver = false;
-            state.isTimerRunning = false;
-            state.isHintMode = false;
-            state.hasRevealedAny = false; 
-            state.timer = 0;
-            state.flags = 0;
-            state.revealedCount = 0;
-            
-            // RESET TITLE
-            dom.titleTop.innerText = "Billy";
-            dom.titleTop.classList.remove('win-glow');
-            dom.titleBottom.innerText = "Miners";
-            dom.titleBottom.classList.remove('win-glow', 'text-cyan-400');
-            dom.titleTop.style.color = "";
-            dom.titleBottom.style.color = "";
+<script>
+const TIERS = {
+  beginner:     { w: 9,  h: 9,  m: 10 },
+  intermediate: { w: 16, h: 16, m: 40 },
+  expert:       { w: 30, h: 16, m: 99 }
+};
 
-            dom.timerDisplay.innerText = "000";
-            dom.mineDisplay.innerText = String(m).padStart(2, '0');
-            dom.modal.style.display = 'none';
-            dom.failurePic.style.display = 'none';
-            dom.hintBtn.classList.remove('active');
-            dom.grid.classList.remove('hint-cursor');
-            
-            dom.grid.style.gridTemplateColumns = `repeat(${w}, 26px)`;
-            dom.grid.style.gridTemplateRows = `repeat(${h}, 26px)`;
-            dom.grid.innerHTML = '';
+let currentTier = 'beginner';
+let autoRestartTimeout = null;
+let autoRestartInterval = null;
+let currentMode = 'dig';
 
-            for (let i = 0; i < w * h; i++) {
-                state.grid.push({ type: 'empty', revealed: false, flagged: false, count: 0 });
-                const c = document.createElement('div');
-                c.className = 'cell';
-                c.id = `c-${i}`;
-                c.dataset.index = i;
-                dom.grid.appendChild(c);
-            }
+const state = {
+  grid: [], isGameOver: false, isTimerRunning: false,
+  isHintMode: false, hasRevealedAny: false,
+  timer: 0, timerInterval: null, flags: 0, revealedCount: 0
+};
 
-            let placed = 0;
-            while (placed < m) {
-                const idx = Math.floor(Math.random() * state.grid.length);
-                if (state.grid[idx].type === 'empty') {
-                    state.grid[idx].type = 'mine';
-                    placed++;
-                }
-            }
+const dom = {
+  grid: document.getElementById('grid'),
+  mineDisplay: document.getElementById('mine-count'),
+  timerDisplay: document.getElementById('timer'),
+  resetBtn: document.getElementById('reset-btn'),
+  hintBtn: document.getElementById('hint-btn'),
+  modal: document.getElementById('modal-overlay'),
+  modalTitle: document.getElementById('modal-title'),
+  modalMsg: document.getElementById('modal-msg'),
+  failurePic: document.getElementById('failure-pic'),
+  countdown: document.getElementById('restart-countdown'),
+  titleTop: document.getElementById('title-top'),
+  titleBottom: document.getElementById('title-bottom'),
+  modeDig: document.getElementById('mode-dig'),
+  modeFlag: document.getElementById('mode-flag')
+};
 
-            for (let i = 0; i < state.grid.length; i++) {
-                if (state.grid[i].type === 'mine') continue;
-                state.grid[i].count = getNeighbors(i).filter(n => state.grid[n].type === 'mine').length;
-            }
-        }
+function setMode(m) {
+  currentMode = m;
+  dom.modeDig.classList.toggle('active', m === 'dig');
+  dom.modeFlag.classList.toggle('active', m === 'flag');
+}
 
-        function getNeighbors(idx) {
-            const { w, h } = TIERS[currentTier];
-            const n = [];
-            const x = idx % w, y = Math.floor(idx / w);
-            for (let dy = -1; dy <= 1; dy++) {
-                for (let dx = -1; dx <= 1; dx++) {
-                    if (dx === 0 && dy === 0) continue;
-                    const nx = x + dx, ny = y + dy;
-                    if (nx >= 0 && nx < w && ny >= 0 && ny < h) n.push(ny * w + nx);
-                }
-            }
-            return n;
-        }
+function init() {
+  clearAutoRestart();
+  clearInterval(state.timerInterval);
+  const { w, h, m } = TIERS[currentTier];
 
-        function checkFirstMove() {
-            if (!state.isTimerRunning) {
-                state.isTimerRunning = true;
-                startTimer();
-            }
-        }
+  Object.assign(state, {
+    grid: [], isGameOver: false, isTimerRunning: false,
+    isHintMode: false, hasRevealedAny: false,
+    timer: 0, flags: 0, revealedCount: 0
+  });
 
-        function toggleHintMode() {
-            if (state.isGameOver) return;
-            state.isHintMode = !state.isHintMode;
-            dom.hintBtn.classList.toggle('active', state.isHintMode);
-            dom.grid.classList.toggle('hint-cursor', state.isHintMode);
-        }
+  dom.titleTop.innerText = 'Billy';
+  dom.titleTop.className = 'title-top';
+  dom.titleBottom.innerText = 'Miners';
+  dom.titleBottom.className = 'title-bottom';
+  dom.timerDisplay.innerText = '000';
+  dom.mineDisplay.innerText = String(m).padStart(3, '0');
+  dom.modal.style.display = 'none';
+  dom.failurePic.style.display = 'none';
+  dom.hintBtn.classList.remove('active');
+  dom.resetBtn.innerText = '🙂';
+  setMode('dig');
 
-        function useHint(idx) {
-            checkFirstMove();
-            const area = [idx, ...getNeighbors(idx)];
-            const hiddenMineIdx = area.find(nIdx => state.grid[nIdx].type === 'mine' && !state.grid[nIdx].revealed && !state.grid[nIdx].flagged);
-            
-            if (hiddenMineIdx !== undefined) {
-                toggleFlag(hiddenMineIdx);
-            }
-            
-            state.isHintMode = false;
-            dom.hintBtn.classList.remove('active');
-            dom.grid.classList.remove('hint-cursor');
-        }
+  dom.grid.style.gridTemplateColumns = `repeat(${w}, 24px)`;
+  dom.grid.style.gridTemplateRows = `repeat(${h}, 24px)`;
+  dom.grid.innerHTML = '';
 
-        function reveal(idx) {
-            if (state.isGameOver) return;
-            
-            const isPureFirstClick = !state.hasRevealedAny; 
-            checkFirstMove();
-            
-            const s = state.grid[idx];
-            if (s.revealed || s.flagged) return;
+  for (let i = 0; i < w * h; i++) {
+    state.grid.push({ type: 'empty', revealed: false, flagged: false, count: 0 });
+    const c = document.createElement('div');
+    c.className = 'cell'; c.id = `c-${i}`; c.dataset.index = i;
+    dom.grid.appendChild(c);
+  }
 
-            if (s.type === 'mine') {
-                if (isPureFirstClick) {
-                    init(); 
-                } else {
-                    endGame(false); 
-                }
-                return;
-            }
+  let placed = 0;
+  while (placed < m) {
+    const idx = Math.floor(Math.random() * state.grid.length);
+    if (state.grid[idx].type === 'empty') { state.grid[idx].type = 'mine'; placed++; }
+  }
+  for (let i = 0; i < state.grid.length; i++) {
+    if (state.grid[i].type === 'mine') continue;
+    state.grid[i].count = getNeighbors(i).filter(n => state.grid[n].type === 'mine').length;
+  }
+}
 
-            state.hasRevealedAny = true; 
-            const q = [idx];
-            while (q.length > 0) {
-                const curIdx = q.shift();
-                const cur = state.grid[curIdx];
-                if (cur.revealed || cur.flagged) continue;
+function getNeighbors(idx) {
+  const { w, h } = TIERS[currentTier];
+  const n = [], x = idx % w, y = Math.floor(idx / w);
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    if (!dx && !dy) continue;
+    const nx = x + dx, ny = y + dy;
+    if (nx >= 0 && nx < w && ny >= 0 && ny < h) n.push(ny * w + nx);
+  }
+  return n;
+}
 
-                cur.revealed = true;
-                state.revealedCount++;
-                const el = document.getElementById(`c-${curIdx}`);
-                el.classList.add('revealed');
+function checkFirstMove() {
+  if (!state.isTimerRunning) { state.isTimerRunning = true; startTimer(); }
+}
 
-                if (cur.count > 0) {
-                    el.innerText = cur.count;
-                    el.classList.add(`n-${cur.count}`);
-                    el.classList.add('has-neighbors');
-                } else {
-                    getNeighbors(curIdx).forEach(n => { if (!state.grid[n].revealed) q.push(n); });
-                }
-            }
-            
-            const { w, h, m } = TIERS[currentTier];
-            if (state.revealedCount === (w * h) - m) endGame(true);
-        }
+function toggleHintMode() {
+  if (state.isGameOver) return;
+  state.isHintMode = !state.isHintMode;
+  dom.hintBtn.classList.toggle('active', state.isHintMode);
+}
 
-        function chord(idx) {
-            const s = state.grid[idx];
-            if (!s.revealed || s.count === 0) return;
-            const neighbors = getNeighbors(idx);
-            const flagCount = neighbors.filter(n => state.grid[n].flagged).length;
-            if (flagCount === s.count) {
-                neighbors.forEach(n => {
-                    if (!state.grid[n].revealed && !state.grid[n].flagged) reveal(n);
-                });
-            }
-        }
+function useHint(idx) {
+  checkFirstMove();
+  const area = [idx, ...getNeighbors(idx)];
+  const hiddenMine = area.find(n => state.grid[n].type === 'mine' && !state.grid[n].revealed && !state.grid[n].flagged);
+  if (hiddenMine !== undefined) toggleFlag(hiddenMine);
+  state.isHintMode = false;
+  dom.hintBtn.classList.remove('active');
+}
 
-        function toggleFlag(idx) {
-            if (state.isGameOver || state.grid[idx].revealed) return;
-            checkFirstMove();
-            
-            state.grid[idx].flagged = !state.grid[idx].flagged;
-            const el = document.getElementById(`c-${idx}`);
-            if (state.grid[idx].flagged) { el.classList.add('flagged'); state.flags++; }
-            else { el.classList.remove('flagged'); state.flags--; }
-            const { m } = TIERS[currentTier];
-            dom.mineDisplay.innerText = String(Math.max(0, m - state.flags)).padStart(2, '0');
-        }
+function reveal(idx) {
+  if (state.isGameOver) return;
+  const isPureFirst = !state.hasRevealedAny;
+  checkFirstMove();
+  const s = state.grid[idx];
+  if (s.revealed || s.flagged) return;
+  if (s.type === 'mine') {
+    if (isPureFirst) { init(); return; }
+    else { endGame(false); return; }
+  }
+  state.hasRevealedAny = true;
+  const q = [idx];
+  while (q.length > 0) {
+    const ci = q.shift(), cur = state.grid[ci];
+    if (cur.revealed || cur.flagged) continue;
+    cur.revealed = true; state.revealedCount++;
+    const el = document.getElementById(`c-${ci}`);
+    el.classList.add('revealed');
+    if (cur.count > 0) {
+      el.innerText = cur.count;
+      el.classList.add(`n-${cur.count}`, 'has-neighbors');
+    } else {
+      getNeighbors(ci).forEach(n => { if (!state.grid[n].revealed) q.push(n); });
+    }
+  }
+  const { w, h, m } = TIERS[currentTier];
+  if (state.revealedCount === (w * h) - m) endGame(true);
+}
 
-        function startTimer() {
-            clearInterval(state.timerInterval);
-            state.timerInterval = setInterval(() => {
-                state.timer++;
-                dom.timerDisplay.innerText = String(Math.min(999, state.timer)).padStart(3, '0');
-            }, 1000);
-        }
+function chord(idx) {
+  const s = state.grid[idx];
+  if (!s.revealed || s.count === 0) return;
+  const nb = getNeighbors(idx);
+  // Only auto-reveal if flagged neighbors exactly match the number
+  if (nb.filter(n => state.grid[n].flagged).length === s.count)
+    nb.forEach(n => { if (!state.grid[n].revealed && !state.grid[n].flagged) reveal(n); });
+}
 
-        function endGame(win) {
-            state.isGameOver = true;
-            state.isHintMode = false;
-            dom.hintBtn.classList.remove('active');
-            dom.grid.classList.remove('hint-cursor');
-            clearInterval(state.timerInterval);
-            
-            state.grid.forEach((c, i) => {
-                if (c.type === 'mine') document.getElementById(`c-${i}`).classList.add('mine');
-            });
+function toggleFlag(idx) {
+  if (state.isGameOver || state.grid[idx].revealed) return;
+  checkFirstMove();
+  state.grid[idx].flagged = !state.grid[idx].flagged;
+  const el = document.getElementById(`c-${idx}`);
+  if (state.grid[idx].flagged) { el.classList.add('flagged'); state.flags++; }
+  else { el.classList.remove('flagged'); state.flags--; }
+  const { m } = TIERS[currentTier];
+  dom.mineDisplay.innerText = String(Math.max(0, m - state.flags)).padStart(3, '0');
+}
 
-            if (win) {
-                // WIN STATE: CHANGE HEADER, NO POPUP
-                dom.titleTop.innerText = "EZ";
-                dom.titleTop.classList.add('win-glow');
-                dom.titleBottom.innerText = "GAME";
-                dom.titleBottom.classList.add('win-glow');
-                dom.titleTop.style.color = "var(--accent)";
-                dom.titleBottom.style.color = "var(--accent)";
-            } else {
-                // LOSE STATE: POPUP
-                dom.modal.style.display = 'flex';
-                dom.modalTitle.innerText = "Noob";
-                dom.modalTitle.className = "text-3xl font-black mb-1 uppercase text-rose-500";
-                dom.modalMsg.innerText = "Billy hit a mine.";
-                dom.failurePic.style.display = 'block';
-                startAutoRestart(1);
-            }
-        }
+function startTimer() {
+  clearInterval(state.timerInterval);
+  state.timerInterval = setInterval(() => {
+    state.timer++;
+    dom.timerDisplay.innerText = String(Math.min(999, state.timer)).padStart(3, '0');
+  }, 1000);
+}
 
-        function startAutoRestart(seconds) {
-            let timeLeft = seconds;
-            dom.countdown.innerText = `AUTO-RESTARTING IN ${timeLeft}...`;
-            
-            autoRestartInterval = setInterval(() => {
-                timeLeft--;
-                if (timeLeft >= 0) {
-                    dom.countdown.innerText = `AUTO-RESTARTING IN ${timeLeft}...`;
-                }
-            }, 1000);
+function endGame(win) {
+  state.isGameOver = true;
+  state.isHintMode = false;
+  dom.hintBtn.classList.remove('active');
+  clearInterval(state.timerInterval);
 
-            autoRestartTimeout = setTimeout(() => {
-                init();
-            }, seconds * 1000);
-        }
+  state.grid.forEach((c, i) => {
+    const el = document.getElementById(`c-${i}`);
+    if (c.type === 'mine') {
+      if (win) el.classList.add('mine-normal');
+      else el.classList.add('mine');
+    }
+  });
 
-        function clearAutoRestart() {
-            if (autoRestartTimeout) clearTimeout(autoRestartTimeout);
-            if (autoRestartInterval) clearInterval(autoRestartInterval);
-            autoRestartTimeout = null;
-            autoRestartInterval = null;
-            dom.countdown.innerText = "";
-        }
+  if (win) {
+    dom.resetBtn.innerText = '😎';
+    dom.titleTop.innerText = 'EZ';
+    dom.titleTop.className = 'title-top win-title';
+    dom.titleBottom.innerText = 'GAME';
+    dom.titleBottom.className = 'title-bottom win-title';
+  } else {
+    dom.resetBtn.innerText = '😵';
+    // Jump scare: fullscreen picture for 0.5s then restart
+    dom.modal.style.display = 'flex';
+    dom.modalTitle.style.display = 'none';
+    dom.modalMsg.style.display = 'none';
+    dom.countdown.style.display = 'none';
+    dom.failurePic.style.display = 'block';
+    dom.failurePic.style.maxWidth = '100vw';
+    dom.failurePic.style.maxHeight = '100vh';
+    dom.failurePic.style.width = '100vw';
+    dom.failurePic.style.height = '100vh';
+    dom.failurePic.style.objectFit = 'cover';
+    dom.failurePic.style.borderRadius = '0';
+    dom.failurePic.style.border = 'none';
+    dom.modal.style.padding = '0';
+    document.querySelector('.modal-box').style.padding = '0';
+    document.querySelector('.modal-box').style.border = 'none';
+    document.querySelector('.modal-box').style.background = 'none';
+    document.querySelector('.modal-box').style.borderRadius = '0';
+    setTimeout(() => {
+      dom.modal.style.display = 'none';
+      dom.modalTitle.style.display = '';
+      dom.modalMsg.style.display = '';
+      dom.countdown.style.display = '';
+      dom.failurePic.style = '';
+      dom.modal.style.padding = '';
+      document.querySelector('.modal-box').style = '';
+      init();
+    }, 500);
+  }
+}
 
-        function changeDifficulty(tier) {
-            currentTier = tier;
-            document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`btn-${tier}`).classList.add('active');
-            init();
-        }
+function startAutoRestart(seconds) {
+  let t = seconds;
+  dom.countdown.innerText = `Restarting in ${t}...`;
+  autoRestartInterval = setInterval(() => {
+    t--;
+    dom.countdown.innerText = t > 0 ? `Restarting in ${t}...` : '';
+  }, 1000);
+  autoRestartTimeout = setTimeout(init, seconds * 1000);
+}
 
-        dom.grid.addEventListener('mousedown', (e) => {
-            const c = e.target.closest('.cell');
-            if (!c) return;
-            const i = parseInt(c.dataset.index);
-            
-            if (state.isHintMode) {
-                useHint(i);
-                return;
-            }
+function clearAutoRestart() {
+  if (autoRestartTimeout) clearTimeout(autoRestartTimeout);
+  if (autoRestartInterval) clearInterval(autoRestartInterval);
+  autoRestartTimeout = autoRestartInterval = null;
+  dom.countdown.innerText = '';
+}
 
-            if (e.button === 0) {
-                if (state.grid[i].revealed) chord(i);
-                else reveal(i);
-            } else if (e.button === 2) {
-                toggleFlag(i);
-            }
-        });
+function changeDifficulty(tier) {
+  currentTier = tier;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`btn-${tier}`).classList.add('active');
+  init();
+}
 
-        window.addEventListener('contextmenu', e => e.preventDefault());
-        dom.resetBtn.addEventListener('click', init);
-        
-        window.onload = init;
-    </script>
+let longPressTimer = null;
+let longPressTriggered = false;
+let isDragAction = false; // true = drag-digging, false = drag-flagging
+let isDragging = false;
+const LONG_PRESS_MS = 200;
+
+dom.grid.addEventListener('mousedown', e => {
+  const c = e.target.closest('.cell');
+  if (!c) return;
+  const i = parseInt(c.dataset.index);
+
+  if (state.isHintMode) { useHint(i); return; }
+  if (e.button === 2) { toggleFlag(i); return; }
+  if (e.button !== 0) return;
+
+  if (state.grid[i].revealed) { chord(i); return; }
+
+  longPressTriggered = false;
+  isDragging = false;
+
+  longPressTimer = setTimeout(() => {
+    longPressTriggered = true;
+    isDragging = true;
+    // long press does opposite of current mode
+    isDragAction = currentMode === 'flag' ? 'dig' : 'flag';
+    if (isDragAction === 'dig') reveal(i);
+    else toggleFlag(i);
+  }, LONG_PRESS_MS);
+});
+
+dom.grid.addEventListener('mouseover', e => {
+  if (!isDragging) return;
+  const c = e.target.closest('.cell');
+  if (!c) return;
+  const i = parseInt(c.dataset.index);
+  if (state.grid[i].revealed) return;
+  if (isDragAction === 'dig') reveal(i);
+  else if (!state.grid[i].flagged) toggleFlag(i);
+});
+
+dom.grid.addEventListener('mouseup', e => {
+  clearTimeout(longPressTimer);
+  isDragging = false;
+  if (longPressTriggered) { longPressTriggered = false; return; }
+  const c = e.target.closest('.cell');
+  if (!c || e.button !== 0) return;
+  const i = parseInt(c.dataset.index);
+  if (state.grid[i].revealed) return;
+  if (currentMode === 'flag') toggleFlag(i);
+  else reveal(i);
+});
+
+window.addEventListener('mouseup', () => {
+  clearTimeout(longPressTimer);
+  isDragging = false;
+  longPressTriggered = false;
+});
+
+window.addEventListener('contextmenu', e => e.preventDefault());
+
+// Touch support for mobile
+dom.grid.addEventListener('touchstart', e => {
+  const c = e.target.closest('.cell');
+  if (!c) return;
+  const i = parseInt(c.dataset.index);
+  if (state.grid[i].revealed) { chord(i); return; }
+  longPressTriggered = false;
+  isDragging = false;
+  longPressTimer = setTimeout(() => {
+    longPressTriggered = true;
+    isDragging = true;
+    isDragAction = currentMode === 'flag' ? 'dig' : 'flag';
+    if (isDragAction === 'dig') reveal(i);
+    else toggleFlag(i);
+  }, LONG_PRESS_MS);
+}, { passive: true });
+
+dom.grid.addEventListener('touchmove', e => {
+  if (!isDragging) { clearTimeout(longPressTimer); return; }
+  const touch = e.touches[0];
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const c = el && el.closest('.cell');
+  if (!c) return;
+  const i = parseInt(c.dataset.index);
+  if (state.grid[i].revealed) return;
+  if (isDragAction === 'dig') reveal(i);
+  else if (!state.grid[i].flagged) toggleFlag(i);
+}, { passive: true });
+
+dom.grid.addEventListener('touchend', e => {
+  clearTimeout(longPressTimer);
+  isDragging = false;
+  if (longPressTriggered) { longPressTriggered = false; return; }
+  const c = e.target.closest('.cell');
+  if (!c) return;
+  e.preventDefault();
+  const i = parseInt(c.dataset.index);
+  if (state.grid[i].revealed) return;
+  if (currentMode === 'flag') toggleFlag(i);
+  else reveal(i);
+});
+dom.resetBtn.addEventListener('click', init);
+window.onload = init;
+</script>
 </body>
 </html>
